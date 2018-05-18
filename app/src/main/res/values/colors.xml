@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#FF4081</color>
+    <color name="toolbarColor">#cdeaec</color>
+    <color name="popupColor">#cbe7e9</color>
+    <color name="backgroundColor">#ffffff</color>
+    <color name="cursorColor">#b165fd</color>
+    <color name="buttonColor">#cbe7e9</color>
+    <color name="hintColor">#c2cfcb</color>
+    <color name="authorPopupColor">#476462</color>
+</resources>
