@@ -7,6 +7,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Handler;
@@ -45,7 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener{
 
     private ImageButton playSongButton;
     private SeekBar songPointBar;
@@ -64,12 +68,18 @@ public class MainActivity extends AppCompatActivity {
     private ForegroundService myService = null;
 
     private static final String IS_PLAYING = "IS_PLAYING";
-
+    private static final String IS_SENSOR_ALLOWED = "IS_SENSOR_ALLOWED";
     private MyViewModel myViewModel;
 
     private int pauseCurrentPos;
 
     private static final int MILISECONDS_CHANGE = 10000;
+    private SensorManager manager;
+    private Sensor sensor;
+
+    private boolean isStoppedBySensor;
+    private boolean isSensorAllowed;
+
 
 
     private static final List<SongItem> songs = new ArrayList<>(Arrays.asList(new SongItem[]{
@@ -79,18 +89,26 @@ public class MainActivity extends AppCompatActivity {
     }));
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         initViews();
         initMediaPlayer(savedInstanceState);
+        if (savedInstanceState!=null && savedInstanceState.containsKey(IS_SENSOR_ALLOWED))
+            isSensorAllowed = savedInstanceState.getBoolean(IS_SENSOR_ALLOWED);
+        else
+            isSensorAllowed = false;
         initAdapter();
         initBasicPlayButton();
         initListeners();
 
         setToolbarMenu();
         getSeekBarStatus();
+
+        manager = (SensorManager)getSystemService(SENSOR_SERVICE);
+        assert manager != null;
+        sensor = manager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
 
 //        startService(new Intent(this, ForegroundService.class));
 //        bindService(new Intent(this,
@@ -255,6 +273,13 @@ public class MainActivity extends AppCompatActivity {
             case R.id.settings:
                 Toast.makeText(this, "Tu beda ustawienia", Toast.LENGTH_SHORT).show();
                 break;
+            case R.id.prox_sensor:
+                if (isSensorAllowed)
+                    isSensorAllowed = false;
+                else
+                    isSensorAllowed = true;
+                Toast.makeText(this, "Is sensor allowed"+Boolean.toString(this.isSensorAllowed), Toast.LENGTH_SHORT).show();
+                break;
             default:
                 Toast.makeText(getApplicationContext(), "Cos zle", Toast.LENGTH_LONG).show();
         }
@@ -308,6 +333,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean(IS_PLAYING, isPlaying);
+        outState.putBoolean(IS_SENSOR_ALLOWED, isSensorAllowed);
         myViewModel.mediaPlayer = mediaPlayer;
         myViewModel.currentPos = pauseCurrentPos;
     }
@@ -315,6 +341,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        manager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+
     }
 
     @Override
@@ -325,7 +353,6 @@ public class MainActivity extends AppCompatActivity {
     class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         private List<SongItem> songs;
         private Context context;
-        private boolean isPlaying;
 
         public MyAdapter(List<SongItem> songs, Context context) {
             this.songs = songs;
@@ -386,4 +413,32 @@ public class MainActivity extends AppCompatActivity {
             return songs.size();
         }
     }
+
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        if (isSensorAllowed && mediaPlayer!=null) {
+            Sensor currentSensor = sensorEvent.sensor;
+            if (currentSensor.getType() == Sensor.TYPE_PROXIMITY) {
+                float val = sensorEvent.values[0];
+                if (val == 0) {
+                    mediaPlayer.pause();
+                    isStoppedBySensor = true;
+                    playSongButton.setImageResource(android.R.drawable.ic_media_play);
+                } else if (isStoppedBySensor && val > 0) {
+                    mediaPlayer.start();
+                    isPlaying = true;
+                    isStoppedBySensor = false;
+                    playSongButton.setImageResource(android.R.drawable.ic_media_pause);
+                }
+            }
+        }
+    }
+
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+    }
+
+
+
 }
