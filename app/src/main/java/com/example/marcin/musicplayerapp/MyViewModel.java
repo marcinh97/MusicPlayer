@@ -10,14 +10,8 @@ import android.media.MediaPlayer;
  */
 
 public class MyViewModel extends ViewModel {
-    private MutableLiveData<MediaPlayer> mediaPlayer;
-    public LiveData<MediaPlayer> getMediaPlayer(){
-        if (mediaPlayer == null){
-            mediaPlayer = new MutableLiveData<>();
-        }
-        return mediaPlayer;
-    }
-    public void saveMediaPlayer(MediaPlayer myMediaPlayer){
-        mediaPlayer.setValue(myMediaPlayer);
-    }
+    public MediaPlayer mediaPlayer;
+    public Thread currentThread;
+    public int currentPos;
+
 }

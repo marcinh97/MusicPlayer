@@ -21,6 +21,7 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -41,6 +42,7 @@ import android.widget.Toolbar;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -50,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView timeFromStart;
     private TextView timeToEnd;
     private MediaPlayer mediaPlayer;
-    private SongAdapter adapter;
+    private MyAdapter adapter;
     private RecyclerView recyclerView;
     private boolean isPlaying;
 
@@ -65,173 +67,111 @@ public class MainActivity extends AppCompatActivity {
 
     private MyViewModel myViewModel;
 
+    private int pauseCurrentPos;
+
+    private static final int MILISECONDS_CHANGE = 10000;
+
+
+    private static final List<SongItem> songs = new ArrayList<>(Arrays.asList(new SongItem[]{
+            new SongItem("Tremor", "Dmitri Vegas, Martin Garrix, Like Mike", R.raw.tremor),
+            new SongItem("Sun Goes Down", "David Guetta & Showtek", R.raw.sun_goes_down),
+            new SongItem("Turn up the speakers", "Dmitri Vegas, Martin Garrix, Like Mike", R.raw.turn_up)
+    }));
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         initViews();
+        initMediaPlayer(savedInstanceState);
+        initAdapter();
+        initBasicPlayButton();
+        initListeners();
 
-        if (savedInstanceState != null && savedInstanceState.containsKey(IS_PLAYING)){
-            isPlaying = savedInstanceState.getBoolean(IS_PLAYING);
-            Toast.makeText(this, Boolean.toString(isPlaying), Toast.LENGTH_SHORT).show();
+        setToolbarMenu();
+        getSeekBarStatus();
 
-        }
-        else{
-            isPlaying = false;
-        }
+//        startService(new Intent(this, ForegroundService.class));
+//        bindService(new Intent(this,
+//                ForegroundService.class), mConnection, Context.BIND_AUTO_CREATE);
+//
+    }
 
-//        Toast.makeText(this, "Is playing? "+Boolean.toString(isPlaying), Toast.LENGTH_SHORT).show();
-
-        android.support.v7.widget.Toolbar toolbar = findViewById(R.id.main_toolbar);
-        setSupportActionBar(toolbar);
-
-
-        final List<SongItem> songs = new ArrayList<>();
-        songs.add(new SongItem("Tremor", "Dmitri Vegas, Martin Garrix, Like Mike", R.raw.tremor));
-        songs.add(new SongItem("Sun Goes Down", "David Guetta & Showtek", R.raw.sun_goes_down));
-        songs.add(new SongItem("Turn up the speakers", "Dmitri Vegas, Martin Garrix, Like Mike", R.raw.turn_up));
-
-        adapter = new SongAdapter(this, songs);
-        setLayoutForRecyclerView();
-        recyclerView.setAdapter(adapter);
-
-
-        adapter.setSongOnItemClickListener(new SongAdapter.SongOnItemClickListener() {
+    private void initListeners() {
+        playSongButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onItemClick(ImageButton playButton, View view, final SongItem songItem, int position) {
-                if (songItem.isPlaying()){
-                    songItem.setPlaying(false);
-                    mediaPlayer.stop();
-                    mediaPlayer.reset();
-                    mediaPlayer.release();
-                    mediaPlayer = null;
-                    isPlaying = false;
-//                    Toast.makeText(MainActivity.this, "Stop "+songItem.getSongTitle(), Toast.LENGTH_SHORT).show();
-                }
-                else{
-                    if (isPlaying) {
-                        for (SongItem song : songs)
-                            song.setPlaying(false);
-                        mediaPlayer.stop();
-                        mediaPlayer.reset();
-                        mediaPlayer.release();
-                    }
-                    mediaPlayer = MediaPlayer.create(getApplicationContext(), songItem.getSongId());
-                    songItem.setPlaying(true);
-                    mediaPlayer.start();
-
-//                    Toast.makeText(MainActivity.this, songItem.getSongTitle(), Toast.LENGTH_SHORT).show();
-
-                    isPlaying = true;
-                    mediaPlayer.setLooping(true);
-                    mediaPlayer.seekTo(0);
-                    mediaPlayer.setVolume(0.5f, 0.5f);
-                    int totalTime = mediaPlayer.getDuration();
-                    songPointBar.setProgress(0);
-                    songPointBar.setMax(totalTime);
-
-                }
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        while(mediaPlayer != null){
-                            try{
-                                Message message = new Message();
-                                message.what = mediaPlayer.getCurrentPosition();
-                                handler.sendMessage(message);
-                                Thread.sleep(1000);
-                            }
-                            catch (InterruptedException e){
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }).start();
-//                Toast.makeText(MainActivity.this, "Is playin??? "+Boolean.toString(isPlaying), Toast.LENGTH_SHORT).show();
+            public void onClick(View view) {
+                startMediaPlayer();
             }
         });
-
-//        playSongButton = findViewById(R.id.play_button);
-//        playSongButton.setOnClickListener();
-
-
-
-
-        songPointBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    mediaPlayer.seekTo(progress);
-                    songPointBar.setProgress(progress);
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-
-        final int MILISECONDS_CHANGE = 10000;
 
         fastforwardButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (mediaPlayer != null) {
-                    int position = mediaPlayer.getCurrentPosition();
-                    mediaPlayer.seekTo(position + MILISECONDS_CHANGE);
-                    songPointBar.setProgress(position + MILISECONDS_CHANGE);
-                }
+                arrowsOnClick(true);
             }
         });
 
         rewindButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (mediaPlayer != null){
-                    int position = mediaPlayer.getCurrentPosition();
-                    mediaPlayer.seekTo(position - MILISECONDS_CHANGE);
-                    songPointBar.setProgress(position - MILISECONDS_CHANGE);
-                }
+                arrowsOnClick(false);
             }
         });
-
-        final Button button = findViewById(R.id.button);
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent service = new Intent(MainActivity.this, ForegroundService.class);
-                if (!ForegroundService.IS_SERVICE_RUNNING) {
-                    service.setAction(ForegroundService.STARTFOREGROUND_ACTION);
-                    ForegroundService.IS_SERVICE_RUNNING = true;
-                    button.setText("Stop Service");
-                } else {
-                    service.setAction(ForegroundService.STOPFOREGROUND_ACTION);
-                    ForegroundService.IS_SERVICE_RUNNING = false;
-                    button.setText("Start Service");
-
-                }
-                startService(service);
-            }
-        });
-
-//        startService(new Intent(this, ForegroundService.class));
-//        bindService(new Intent(this,
-//                ForegroundService.class), mConnection, Context.BIND_AUTO_CREATE);
-//
-
-
-        myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
-        mediaPlayer = myViewModel.getMediaPlayer().getValue();
-
-        Toast.makeText(this, "Is mediaPlayer null? "+Boolean.toString(mediaPlayer==null), Toast.LENGTH_SHORT).show();
     }
 
-//    private ServiceConnection mConnection = new ServiceConnection() {
+    private void arrowsOnClick(boolean isFastForward){
+        if (mediaPlayer != null){
+            int position = mediaPlayer.getCurrentPosition();
+            int afterClick = isFastForward ? position + MILISECONDS_CHANGE : position - MILISECONDS_CHANGE;
+            mediaPlayer.seekTo(afterClick);
+            songPointBar.setProgress(afterClick);
+        }
+    }
+
+    private void startMediaPlayer() {
+        if (!mediaPlayer.isPlaying()) {
+            mediaPlayer.seekTo(pauseCurrentPos);
+            mediaPlayer.start();
+            playSongButton.setImageResource(android.R.drawable.ic_media_pause);
+        } else {
+            mediaPlayer.pause();
+            playSongButton.setImageResource(android.R.drawable.ic_media_play);
+        }
+        pauseCurrentPos = mediaPlayer.getCurrentPosition();
+    }
+
+    private void initBasicPlayButton() {
+        if (mediaPlayer.isPlaying()) {
+            playSongButton.setImageResource(android.R.drawable.ic_media_pause);
+        } else {
+            playSongButton.setImageResource(android.R.drawable.ic_media_play);
+        }
+    }
+
+    private void initAdapter() {
+        adapter = new MyAdapter(songs, getApplicationContext());
+        setLayoutForRecyclerView();
+        recyclerView.setAdapter(adapter);
+    }
+
+    private void initMediaPlayer(Bundle savedInstanceState) {
+        myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
+        if (savedInstanceState == null) {
+            mediaPlayer = MediaPlayer.create(getApplicationContext(), songs.get(0).getSongId());
+        } else {
+            mediaPlayer = myViewModel.mediaPlayer;
+            pauseCurrentPos = myViewModel.currentPos;
+        }
+    }
+
+    private void setToolbarMenu() {
+        android.support.v7.widget.Toolbar toolbar = findViewById(R.id.main_toolbar);
+        setSupportActionBar(toolbar);
+    }
+
+    //    private ServiceConnection mConnection = new ServiceConnection() {
 //        @Override
 //        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
 //            myService = ((ForegroundService.LocalBinder) iBinder).getService();
@@ -242,16 +182,44 @@ public class MainActivity extends AppCompatActivity {
 //            myService = null;
 //        }
 //    };
+    public void getSeekBarStatus() {
+        new Thread(new Runnable() {
 
-    @SuppressLint("HandlerLeak")
-    private Handler handler = new Handler(){
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            int currentPosition = msg.what;
-            songPointBar.setProgress(currentPosition);
-        }
-    };
+            @Override
+            public void run() {
+                int currentPosition = 0;
+                int total = mediaPlayer.getDuration();
+                songPointBar.setMax(total);
+                while (mediaPlayer != null && currentPosition < total) {
+                    try {
+                        Thread.sleep(1000);
+                        currentPosition = mediaPlayer.getCurrentPosition();
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                    pauseCurrentPos = currentPosition;
+                    songPointBar.setProgress(currentPosition);
+
+                }
+            }
+        }).start();
+        songPointBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(final SeekBar seekBar, int ProgressValue, boolean fromUser) {
+                if (fromUser) {
+                    mediaPlayer.seekTo(ProgressValue);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+    }
 
     private void setLayoutForRecyclerView() {
         RecyclerView.LayoutManager recyclerLayoutManager = new LinearLayoutManager(this);
@@ -261,7 +229,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
     }
 
-    private void initViews(){
+    private void initViews() {
         playSongButton = findViewById(R.id.play_button);
         songPointBar = findViewById(R.id.song_point_sBar);
         timeFromStart = findViewById(R.id.time_from_start_tV);
@@ -280,7 +248,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()){
+        switch (item.getItemId()) {
             case R.id.about_author:
                 showAuthorImagePopup();
                 break;
@@ -293,13 +261,13 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private void showAuthorImagePopup(){
+    private void showAuthorImagePopup() {
         final float SHADOW_BEHIND_POPUP_LEVEL = 10;
         final ConstraintLayout constraintLayout = findViewById(R.id.constraintLayout);
         int orientation = getResources().getConfiguration().orientation;
         final double POPUP_WINDOW_RATIO = 0.7;
         final int bottomPositionOfImageCenter = orientation == Configuration.ORIENTATION_LANDSCAPE ?
-                (int)(getResources().getDimension(R.dimen.bottom_position_of_image_center)) : 0;
+                (int) (getResources().getDimension(R.dimen.bottom_position_of_image_center)) : 0;
 
         LayoutInflater layoutInflater;
         layoutInflater = (LayoutInflater) getApplicationContext().getSystemService(LAYOUT_INFLATER_SERVICE);
@@ -309,8 +277,8 @@ public class MainActivity extends AppCompatActivity {
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
 
-        authorImagePopup = new PopupWindow(container, (int)(POPUP_WINDOW_RATIO *displayMetrics.widthPixels),
-                (int)(POPUP_WINDOW_RATIO *displayMetrics.heightPixels), true);
+        authorImagePopup = new PopupWindow(container, (int) (POPUP_WINDOW_RATIO * displayMetrics.widthPixels),
+                (int) (POPUP_WINDOW_RATIO * displayMetrics.heightPixels), true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             authorImagePopup.setElevation(SHADOW_BEHIND_POPUP_LEVEL);
         }
@@ -320,11 +288,11 @@ public class MainActivity extends AppCompatActivity {
         allowUserToDismissPopupByClicking(container);
     }
 
-    private void showAuthorImagePopupOnScreen(ConstraintLayout layout, int positionOfImage){
+    private void showAuthorImagePopupOnScreen(ConstraintLayout layout, int positionOfImage) {
         authorImagePopup.showAtLocation(layout, Gravity.CENTER, 0, positionOfImage);
     }
 
-    private void allowUserToDismissPopupByClicking(ViewGroup container){
+    private void allowUserToDismissPopupByClicking(ViewGroup container) {
         assert container != null;
         container.setOnTouchListener(new View.OnTouchListener() {
             @SuppressLint("ClickableViewAccessibility")
@@ -340,8 +308,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean(IS_PLAYING, isPlaying);
-        myViewModel.saveMediaPlayer(mediaPlayer);
-
+        myViewModel.mediaPlayer = mediaPlayer;
+        myViewModel.currentPos = pauseCurrentPos;
     }
 
     @Override
@@ -354,10 +322,68 @@ public class MainActivity extends AppCompatActivity {
         super.onConfigurationChanged(newConfig);
     }
 
-    //    @Override
-//    protected void onDestroy() {
-//        super.onDestroy();
-//        if (myService != null)
-//            unbindService(mConnection);
-//    }
+    class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
+        private List<SongItem> songs;
+        private Context context;
+        private boolean isPlaying;
+
+        public MyAdapter(List<SongItem> songs, Context context) {
+            this.songs = songs;
+            this.context = context;
+        }
+
+        class MyViewHolder extends RecyclerView.ViewHolder {
+            TextView songTitle;
+            TextView songAuthor;
+            ImageButton playSongButton;
+
+            public MyViewHolder(View itemView) {
+                super(itemView);
+                songTitle = itemView.findViewById(R.id.song_title_tV);
+                songAuthor = itemView.findViewById(R.id.song_author_tV);
+                playSongButton = itemView.findViewById(R.id.play_song_btn);
+            }
+        }
+
+        @Override
+        public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View view = getView(parent);
+            return new MyViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(MyViewHolder holder, int position) {
+            final int pos = holder.getAdapterPosition();
+            final SongItem song = songs.get(pos);
+            holder.songTitle.setText(song.getSongTitle());
+            holder.songAuthor.setText(song.getSongAuthor());
+            holder.playSongButton.setImageResource(android.R.drawable.ic_media_play);
+            holder.playSongButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (mediaPlayer != null) {
+                        mediaPlayer.stop();
+                        isPlaying = false;
+                    }
+                    mediaPlayer = MediaPlayer.create(getApplicationContext(), song.getSongId());
+                    songPointBar.setMax(mediaPlayer.getDuration());
+                    getSeekBarStatus();
+                    mediaPlayer.start();
+                    isPlaying = true;
+                    playSongButton.setImageResource(android.R.drawable.ic_media_pause);
+                }
+
+            });
+        }
+
+        private View getView(ViewGroup parent) {
+            LayoutInflater inflater = LayoutInflater.from(context);
+            return inflater.inflate(R.layout.song_row, parent, false);
+        }
+
+        @Override
+        public int getItemCount() {
+            return songs.size();
+        }
+    }
 }
