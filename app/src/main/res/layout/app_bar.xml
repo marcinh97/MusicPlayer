@@ -7,13 +7,15 @@
     android:layout_height="wrap_content"
     android:theme="@style/CustomToolbarStyle"
     app:popupTheme="@style/PopupThemeStyle"
-    android:background="@color/toolbarColor"
+    app:subtitleTextColor="@color/fontColor"
+    android:background="@color/backgroundColor"
     >
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
         <TextView
             android:id="@+id/app_name_banner"
+            android:textColor="@color/fontColor"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"

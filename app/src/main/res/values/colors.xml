@@ -3,11 +3,12 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
-    <color name="toolbarColor">#cdeaec</color>
+    <color name="toolbarColor">#cec3c3</color>
     <color name="popupColor">#cbe7e9</color>
-    <color name="backgroundColor">#ffffff</color>
-    <color name="cursorColor">#b165fd</color>
+    <color name="backgroundColor">#2d2b2b</color>
+    <color name="cursorColor">#00ece0</color>
     <color name="buttonColor">#cbe7e9</color>
     <color name="hintColor">#c2cfcb</color>
     <color name="authorPopupColor">#476462</color>
+    <color name="fontColor">#00ece0</color>
 </resources>

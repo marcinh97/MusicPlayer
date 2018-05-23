@@ -51,7 +51,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener{
 
-    private ImageButton playSongButton;
+    private ImageView playSongButton;
     private SeekBar songPointBar;
     private TextView timeFromStart;
     private TextView timeToEnd;
@@ -362,7 +362,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         class MyViewHolder extends RecyclerView.ViewHolder {
             TextView songTitle;
             TextView songAuthor;
-            ImageButton playSongButton;
+            ImageView playSongButton;
 
             public MyViewHolder(View itemView) {
                 super(itemView);
@@ -416,6 +416,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
+//        Toast.makeText(this, "Is allowed on changed"+Boolean.toString(isSensorAllowed), Toast.LENGTH_SHORT).show();
         if (isSensorAllowed && mediaPlayer!=null) {
             Sensor currentSensor = sensorEvent.sensor;
             if (currentSensor.getType() == Sensor.TYPE_PROXIMITY) {
