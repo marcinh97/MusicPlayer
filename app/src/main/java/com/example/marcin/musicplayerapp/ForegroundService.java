@@ -1,16 +1,23 @@
 package com.example.marcin.musicplayerapp;
 
+import android.app.IntentService;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by marcin on 17.05.2018.
@@ -27,29 +34,76 @@ public class ForegroundService extends Service {
     public static String STARTFOREGROUND_ACTION = "com.example.marcin.musicplayerapp.foregroundservice.action.startforeground";
     public static String STOPFOREGROUND_ACTION = "com.example.marcin.musicplayerapp.foregroundservice.action.stopforeground";
     public static int FOREGROUND_SERVICE = 101;
-//    private final IBinder mBinder = new LocalBinder();
+    private final IBinder mBinder = new LocalBinder();
+    private static final List<SongItem> songs = new ArrayList<>(Arrays.asList(new SongItem[]{
+            new SongItem("Counting stars", "One republic", R.raw.counting_stars),
+            new SongItem("Get free", "Major lazer", R.raw.get_free),
+            new SongItem("High", "Sir Sly", R.raw.high),
+            new SongItem("Tremor", "Dmitri Vegas, Martin Garrix, Like Mike", R.raw.tremor),
+            new SongItem("Sun Goes Down", "David Guetta & Showtek", R.raw.sun_goes_down),
+            new SongItem("Turn up the speakers", "Dmitri Vegas, Martin Garrix, Like Mike", R.raw.turn_up)
+    }));
+
+    private int currentPosition = 0;
+    private MediaPlayer mediaPlayer;
+
+    private Notification notification;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        currentPosition = 0;
+        mediaPlayer = new MediaPlayer();
+
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
         if (action.equals(STARTFOREGROUND_ACTION)){
-            Toast.makeText(this, "Service Started!", Toast.LENGTH_SHORT).show();
+            int pos = intent.getIntExtra("SONG_NUMBER", 0);
+            int toSeek = intent.getIntExtra("MEDIA_PLAYER_POSITION", 0);
+            currentPosition = pos;
+//            Toast.makeText(this, "MPL_"+Integer.toString(toSeek), Toast.LENGTH_SHORT).show();
+            mediaPlayer = MediaPlayer.create(getApplicationContext(), songs.get(pos).getSongId());
+            mediaPlayer.seekTo(toSeek);
+            mediaPlayer.start();
             showNotification();
         }
         else if (action.equals(PREV_ACTION)){
-            Toast.makeText(this, "Clicked Previous!", Toast.LENGTH_SHORT)
-                    .show();
+            if (mediaPlayer != null){
+                mediaPlayer.stop();
+            }
+            if (currentPosition == 0){
+                currentPosition = songs.size()-1;
+            }
+            else {
+                currentPosition--;
+            }
+            mediaPlayer = MediaPlayer.create(getApplicationContext(), songs.get(currentPosition).getSongId());
+            mediaPlayer.start();
+            showNotification();
+
         }
         else if(action.equals(PLAY_ACTION)){
-            Toast.makeText(this, "Clicked Play!", Toast.LENGTH_SHORT).show();
+            if (mediaPlayer != null){
+                mediaPlayer.stop();
+            }
+            mediaPlayer = MediaPlayer.create(getApplicationContext(), songs.get(currentPosition%songs.size()).getSongId());
+            mediaPlayer.start();
+
+
         }
         else if(action.equals(NEXT_ACTION)){
-            Toast.makeText(this, "Clicked Next!", Toast.LENGTH_SHORT).show();
+            if (mediaPlayer != null) {
+                mediaPlayer.stop();
+
+            }
+            currentPosition++;
+            mediaPlayer = MediaPlayer.create(getApplicationContext(), songs.get(currentPosition%songs.size()).getSongId());
+            mediaPlayer.start();
+            showNotification();
+           // mediaPlayer = null;
         }
         else if(action.equals(STOPFOREGROUND_ACTION)){
             stopForeground(true);
@@ -82,11 +136,12 @@ public class ForegroundService extends Service {
         PendingIntent pnextIntent = PendingIntent.getService(this, 0,
                 nextIntent, 0);
 
+        SongItem song = songs.get(currentPosition%songs.size());
 
         Notification notification = new NotificationCompat.Builder(this)
-                .setContentTitle("TutorialsFace Music Player")
-                .setTicker("TutorialsFace Music Player")
-                .setContentText("My song")
+                .setContentTitle(song.getSongTitle())
+                .setTicker(song.getSongAuthor())
+                .setContentText(song.getSongAuthor())
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -102,22 +157,27 @@ public class ForegroundService extends Service {
     }
     public void onDestroy(){
         super.onDestroy();
-        Toast.makeText(this, "Service Detroyed!", Toast.LENGTH_SHORT).show();
+        mediaPlayer.stop();
+        mediaPlayer.release();
     }
 
-//    public class LocalBinder extends Binder {
-//        ForegroundService getService() {
-//            // Return this instance of LocalService so clients can call public methods
-//            return ForegroundService.this;
-//        }
-//    }
+    public class LocalBinder extends Binder {
+        ForegroundService getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return ForegroundService.this;
+        }
+    }
 
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
     }
 
+    @Override
+    public boolean onUnbind(Intent intent) {
 
+        return super.onUnbind(intent);
+    }
 }

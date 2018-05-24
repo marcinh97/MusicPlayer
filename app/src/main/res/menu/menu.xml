@@ -9,11 +9,23 @@
         app:showAsAction = "never" />
 
     <item
-        android:id="@+id/settings"
-        android:title="@string/settings"
+        android:id="@+id/by_title"
+        android:title="@string/sort_by_title"
         app:showAsAction = "never" />
+
+
+    <item
+        android:id="@+id/by_author"
+        android:title="@string/sort_by_author"
+        app:showAsAction = "never" />
+
 
     <item android:id="@+id/prox_sensor"
         android:title="@string/sensor"
         app:showAsAction="never"/>
+
+    <item android:id="@+id/background"
+        android:title="@string/backgr"
+        app:showAsAction="never"/>
+
 </menu>

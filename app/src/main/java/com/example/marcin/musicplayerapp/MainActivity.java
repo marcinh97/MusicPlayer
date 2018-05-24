@@ -47,6 +47,8 @@ import android.widget.Toolbar;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener{
@@ -81,8 +83,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean isSensorAllowed;
 
 
+    private Intent AAAplayIntent;
+
+    private MusicService musicSrv;
+    private Intent playIntent;
+    private boolean musicBound = false;
+
+    private int currentlyPlayedPosition;
+    private int serviceMediaPlayerPosition;
 
     private static final List<SongItem> songs = new ArrayList<>(Arrays.asList(new SongItem[]{
+            new SongItem("Counting stars", "One republic", R.raw.counting_stars),
+            new SongItem("Get free", "Major lazer", R.raw.get_free),
+            new SongItem("High", "Sir Sly", R.raw.high),
             new SongItem("Tremor", "Dmitri Vegas, Martin Garrix, Like Mike", R.raw.tremor),
             new SongItem("Sun Goes Down", "David Guetta & Showtek", R.raw.sun_goes_down),
             new SongItem("Turn up the speakers", "Dmitri Vegas, Martin Garrix, Like Mike", R.raw.turn_up)
@@ -106,15 +119,79 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setToolbarMenu();
         getSeekBarStatus();
 
+
+
         manager = (SensorManager)getSystemService(SENSOR_SERVICE);
         assert manager != null;
         sensor = manager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
 
+        findViewById(R.id.button3).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                int ab = 2;
+            }
+        });
+
+        Button myButton = findViewById(R.id.button);
+        myButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                playIntent = new Intent(MainActivity.this, ForegroundService.class);
+                playIntent.setAction(ForegroundService.STARTFOREGROUND_ACTION);
+                startService(playIntent);
+                mediaPlayer.stop();
+            }
+        });
+
+//
 //        startService(new Intent(this, ForegroundService.class));
 //        bindService(new Intent(this,
 //                ForegroundService.class), mConnection, Context.BIND_AUTO_CREATE);
-//
+
     }
+//
+//
+//    @Override
+//    protected void onStart() {
+//        super.onStart();
+//        if(playIntent==null){
+//            playIntent = new Intent(this, MySongForegroundService.class);
+//            bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
+//            startService(playIntent);
+//        }
+//    }
+
+    public void songPicked(View view){
+        musicSrv.setSong(Integer.parseInt(view.getTag().toString()));
+        musicSrv.playSong();
+    }
+
+    private ServiceConnection musicConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MusicService.MusicBinder binder = (MusicService.MusicBinder)service;
+            musicSrv = binder.getService();
+            musicSrv.setList(songs);
+            musicBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            musicBound = false;
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+//        if (playIntent == null){
+//            playIntent = new Intent(this, MusicService.class);
+//            bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
+//            startService(playIntent);
+//        }
+    }
+
+
 
     private void initListeners() {
         playSongButton.setOnClickListener(new View.OnClickListener() {
@@ -189,17 +266,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setSupportActionBar(toolbar);
     }
 
-    //    private ServiceConnection mConnection = new ServiceConnection() {
-//        @Override
-//        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-//            myService = ((ForegroundService.LocalBinder) iBinder).getService();
-//        }
-//
-//        @Override
-//        public void onServiceDisconnected(ComponentName componentName) {
-//            myService = null;
-//        }
-//    };
+        private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            myService = ((ForegroundService.LocalBinder) iBinder).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            myService = null;
+        }
+    };
+
+
     public void getSeekBarStatus() {
         new Thread(new Runnable() {
 
@@ -264,21 +343,48 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return true;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.about_author:
                 showAuthorImagePopup();
                 break;
-            case R.id.settings:
-                Toast.makeText(this, "Tu beda ustawienia", Toast.LENGTH_SHORT).show();
+            case R.id.by_title:
+                Collections.sort(songs, new Comparator<SongItem>() {
+                    @Override
+                    public int compare(SongItem m1, SongItem m2) {
+                        return m1.getSongTitle().compareToIgnoreCase(m2.getSongTitle());
+                    }
+                });
+                adapter.notifyDataSetChanged();
+                break;
+            case R.id.by_author:
+                Collections.sort(songs, new Comparator<SongItem>() {
+                    @Override
+                    public int compare(SongItem m1, SongItem m2) {
+                        return m1.getSongAuthor().compareToIgnoreCase(m2.getSongAuthor());
+                    }
+                });
+                adapter.notifyDataSetChanged();
                 break;
             case R.id.prox_sensor:
                 if (isSensorAllowed)
                     isSensorAllowed = false;
                 else
                     isSensorAllowed = true;
-                Toast.makeText(this, "Is sensor allowed"+Boolean.toString(this.isSensorAllowed), Toast.LENGTH_SHORT).show();
+                break;
+            case R.id.background:
+                playIntent = new Intent(MainActivity.this, ForegroundService.class);
+                playIntent.setAction(ForegroundService.STARTFOREGROUND_ACTION);
+                playIntent.putExtra("SONG_NUMBER", currentlyPlayedPosition);
+//                Toast.makeText(MainActivity.this, "Pos"+Integer.toString(currentlyPlayedPosition), Toast.LENGTH_SHORT).show();
+                int currPos = mediaPlayer.getCurrentPosition();
+                Toast.makeText(this, Integer.toString(currPos), Toast.LENGTH_SHORT).show();
+                playIntent.putExtra("MEDIA_PLAYER_POSITION", mediaPlayer.getCurrentPosition());
+                startService(playIntent);
+//                Toast.makeText(this, "Player"+Integer.toString(mediaPlayer.getCurrentPosition()), Toast.LENGTH_SHORT).show();
+                mediaPlayer.stop();
                 break;
             default:
                 Toast.makeText(getApplicationContext(), "Cos zle", Toast.LENGTH_LONG).show();
@@ -336,6 +442,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         outState.putBoolean(IS_SENSOR_ALLOWED, isSensorAllowed);
         myViewModel.mediaPlayer = mediaPlayer;
         myViewModel.currentPos = pauseCurrentPos;
+//        if((Integer)musicService.getPosition()!=null)
+//            outState.putInt("position",musicService.getPosition());
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+//        savedInstanceState.getInt("position");
     }
 
     @Override
@@ -379,7 +492,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         @Override
-        public void onBindViewHolder(MyViewHolder holder, int position) {
+        public void onBindViewHolder(MyViewHolder holder, final int position) {
             final int pos = holder.getAdapterPosition();
             final SongItem song = songs.get(pos);
             holder.songTitle.setText(song.getSongTitle());
@@ -398,6 +511,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     mediaPlayer.start();
                     isPlaying = true;
                     playSongButton.setImageResource(android.R.drawable.ic_media_pause);
+                    currentlyPlayedPosition = position;
                 }
 
             });
@@ -437,9 +551,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
+    protected void onDestroy() {
+        if (playIntent != null)
+            stopService(playIntent);
+        musicSrv = null;
+        super.onDestroy();
     }
 
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+    }
 
 
 }

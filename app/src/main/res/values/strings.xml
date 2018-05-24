@@ -6,5 +6,12 @@
     <string name="author_name">Marcin Horak</string>
     <string name="settings">Settings</string>
     <string name="sensor">Proximity sensor</string>
+    <string name="backgr">Play in background</string>
+    <string name="fast">Fast</string>
+    <string name="normal_speed">Normal speed</string>
+    <string name="fast_speed">Fast speed</string>
+    <string name="slow_speed">Slow speed</string>
+    <string name="sort_by_title">Sort by title</string>
+    <string name="sort_by_author">Sort by author</string>
 
 </resources>
