@@ -1,31 +1,21 @@
 package com.example.marcin.musicplayerapp;
 
-import android.app.IntentService;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Created by marcin on 17.05.2018.
- */
 
 public class ForegroundService extends Service {
-    private static final String LOG_TAG = "ForegroundService";
-    public static boolean IS_SERVICE_RUNNING = false;
     public static String MAIN_ACTION = "com.example.marcin.musicplayerapp.foregroundservice.action.main";
     public static String INIT_ACTION = "com.example.marcin.musicplayerapp.foregroundservice.action.init";
     public static String PREV_ACTION = "com.example.marcin.musicplayerapp.foregroundservice.action.prev";
@@ -47,7 +37,6 @@ public class ForegroundService extends Service {
     private int currentPosition = 0;
     private MediaPlayer mediaPlayer;
 
-    private Notification notification;
 
     @Override
     public void onCreate() {
@@ -64,7 +53,6 @@ public class ForegroundService extends Service {
             int pos = intent.getIntExtra("SONG_NUMBER", 0);
             int toSeek = intent.getIntExtra("MEDIA_PLAYER_POSITION", 0);
             currentPosition = pos;
-//            Toast.makeText(this, "MPL_"+Integer.toString(toSeek), Toast.LENGTH_SHORT).show();
             mediaPlayer = MediaPlayer.create(getApplicationContext(), songs.get(pos).getSongId());
             mediaPlayer.seekTo(toSeek);
             mediaPlayer.start();
@@ -91,8 +79,6 @@ public class ForegroundService extends Service {
             }
             mediaPlayer = MediaPlayer.create(getApplicationContext(), songs.get(currentPosition%songs.size()).getSongId());
             mediaPlayer.start();
-
-
         }
         else if(action.equals(NEXT_ACTION)){
             if (mediaPlayer != null) {
@@ -103,11 +89,9 @@ public class ForegroundService extends Service {
             mediaPlayer = MediaPlayer.create(getApplicationContext(), songs.get(currentPosition%songs.size()).getSongId());
             mediaPlayer.start();
             showNotification();
-           // mediaPlayer = null;
         }
         else if(action.equals(STOPFOREGROUND_ACTION)){
             stopForeground(true);
-            //stopSelf();
         }
 
         return START_STICKY;
@@ -161,9 +145,8 @@ public class ForegroundService extends Service {
         mediaPlayer.release();
     }
 
-    public class LocalBinder extends Binder {
+    class LocalBinder extends Binder {
         ForegroundService getService() {
-            // Return this instance of LocalService so clients can call public methods
             return ForegroundService.this;
         }
     }

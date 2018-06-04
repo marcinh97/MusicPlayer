@@ -11,7 +11,6 @@ import android.media.MediaPlayer;
 
 public class MyViewModel extends ViewModel {
     public MediaPlayer mediaPlayer;
-    public Thread currentThread;
     public int currentPos;
 
 }
