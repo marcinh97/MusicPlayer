@@ -1,38 +1,26 @@
 package com.example.marcin.musicplayerapp;
 
-/**
- * Created by marcin on 17.05.2018.
- */
-
-public class SongItem {
+class SongItem {
     private String songTitle;
     private String songAuthor;
     private int songId;
-    private boolean isPlaying = false;
 
-    public SongItem(String songTitle, String songAuthor, int songId) {
+    SongItem(String songTitle, String songAuthor, int songId) {
         this.songTitle = songTitle;
         this.songAuthor = songAuthor;
         this.songId = songId;
     }
 
-    public String getSongTitle() {
+    String getSongTitle() {
         return songTitle;
     }
 
-    public String getSongAuthor() {
+    String getSongAuthor() {
         return songAuthor;
     }
 
-    public int getSongId() {
+    int getSongId() {
         return songId;
     }
 
-    public boolean isPlaying() {
-        return isPlaying;
-    }
-
-    public void setPlaying(boolean playing) {
-        isPlaying = playing;
-    }
 }

@@ -13,5 +13,10 @@
     <string name="slow_speed">Slow speed</string>
     <string name="sort_by_title">Sort by title</string>
     <string name="sort_by_author">Sort by author</string>
+    <string name="sth_went_wrong">Something went wrong!</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="replay">Replay</string>
+
 
 </resources>
